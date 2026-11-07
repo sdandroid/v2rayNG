@@ -79,6 +79,8 @@ object AppConfig {
     const val PREF_ROOT_MODE_ENABLE = "pref_root_mode_enabled"
     const val PREF_ROOT_LAN_SHARING = "pref_root_lan_sharing"
     const val PREF_IS_BOOTED = "pref_is_booted"
+    const val PREF_WIFI_AUTO_DISCONNECT = "pref_wifi_auto_disconnect"
+    const val PREF_WIFI_DISCONNECT_SSIDS = "pref_wifi_disconnect_ssids"
     const val PREF_CHECK_UPDATE_PRE_RELEASE = "pref_check_update_pre_release"
     const val PREF_GEO_FILES_SOURCES = "pref_geo_files_sources"
     const val PREF_USE_HEV_TUNNEL = "pref_use_hev_tunnel_v2"

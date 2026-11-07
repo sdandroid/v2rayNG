@@ -2,10 +2,14 @@ package com.v2ray.ang.ui.settings
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.viewModels
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -177,6 +183,14 @@ fun SettingsScreen(
     var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD)
 
     var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
+    var wifiAutoDisconnect by rememberMmkvBool(AppConfig.PREF_WIFI_AUTO_DISCONNECT, false)
+    var wifiDisconnectSsids by rememberMmkvString(AppConfig.PREF_WIFI_DISCONNECT_SSIDS, "")
+    val settingsContext = LocalContext.current
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        wifiAutoDisconnect = granted
+    }
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
@@ -309,6 +323,27 @@ fun SettingsScreen(
                 onExpandedChange = { vpnSettingsExpanded = it }
             )
             if (vpnSettingsExpanded) {
+                SettingsSwitchItem(
+                    title = "指定 Wi-Fi 自动断开代理",
+                    summary = "连接指定 Wi-Fi 后停止代理，不会自动重连；需开启系统定位服务",
+                    checked = wifiAutoDisconnect,
+                    onCheckedChange = { enabled ->
+                        if (!enabled) {
+                            wifiAutoDisconnect = false
+                        } else if (ContextCompat.checkSelfPermission(
+                                settingsContext, Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED) {
+                            wifiAutoDisconnect = true
+                        } else {
+                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    }
+                )
+                SettingsEditItem(
+                    title = "自动断开的 Wi-Fi 名称（SSID，每行一个）",
+                    value = wifiDisconnectSsids,
+                    onValueChanged = { wifiDisconnectSsids = it }
+                )
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_ipv6_enabled),
                     summary = stringResource(R.string.summary_pref_ipv6_enabled),

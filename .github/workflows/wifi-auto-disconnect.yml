@@ -1,0 +1,67 @@
+name: Build Wi-Fi auto-disconnect APK
+
+on:
+  push:
+    branches:
+      - feature/wifi-auto-disconnect
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK and NDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
+
+      - name: Build native tun libraries
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
+          export NDK_HOME="$ANDROID_NDK_HOME"
+          bash compile-hevtun.sh
+          cp -r libs V2rayNG/app/
+
+      - name: Determine Xray library version
+        run: |
+          echo "XRAY_TAG=$(git -C AndroidLibXrayLite describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+
+      - name: Download Xray AAR
+        uses: robinraju/release-downloader@v1.13
+        with:
+          repository: 2dust/AndroidLibXrayLite
+          tag: ${{ env.XRAY_TAG }}
+          fileName: libv2ray.aar
+          out-file-path: V2rayNG/app/libs/
+
+      - name: Assemble unsigned-for-release debug APKs
+        run: |
+          cd V2rayNG
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod +x gradlew
+          ./gradlew assembleFdroidDebug --stacktrace
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2rayNG-wifi-auto-disconnect-debug-apks
+          path: V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
