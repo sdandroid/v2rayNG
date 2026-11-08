@@ -28,6 +28,7 @@ import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.service.DialerNativeService
 import com.v2ray.ang.service.DialerWebviewService
 import com.v2ray.ang.service.NetworkMonitor
+import com.v2ray.ang.service.WifiDisconnectMonitor
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CoroutineScope
@@ -52,6 +53,7 @@ object CoreServiceManager {
     private var processFinder: XrayProcessFinder? = null
     private var browserDialer: IDialerService? = null
     private var networkMonitor: NetworkMonitor? = null
+    private var wifiDisconnectMonitor: WifiDisconnectMonitor? = null
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
@@ -195,6 +197,8 @@ object CoreServiceManager {
 
         networkMonitor?.unregister()
         networkMonitor = null
+        wifiDisconnectMonitor?.unregister()
+        wifiDisconnectMonitor = null
         currentVpnInterface = null
 
         if (isRunning()) {
@@ -232,6 +236,12 @@ object CoreServiceManager {
      * and root mode as well, not just behind the VPN interface.
      */
     private fun startNetworkMonitor(service: Service) {
+        if (wifiDisconnectMonitor == null) {
+            wifiDisconnectMonitor = WifiDisconnectMonitor(service) {
+                // Stop the whole service, including the VPN interface.
+                serviceControl?.get()?.stopService()
+            }.also { it.register() }
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
         if (networkMonitor != null) return
 
