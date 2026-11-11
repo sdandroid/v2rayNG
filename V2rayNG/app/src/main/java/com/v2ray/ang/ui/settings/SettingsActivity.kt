@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.settings
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -29,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -186,10 +188,55 @@ fun SettingsScreen(
     var wifiAutoDisconnect by rememberMmkvBool(AppConfig.PREF_WIFI_AUTO_DISCONNECT, false)
     var wifiDisconnectSsids by rememberMmkvString(AppConfig.PREF_WIFI_DISCONNECT_SSIDS, "")
     val settingsContext = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun backgroundLocationGranted(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            ContextCompat.checkSelfPermission(
+                settingsContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+    var hasBackgroundLocation by remember { mutableStateOf(backgroundLocationGranted()) }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            // Refresh after the user comes back from Android's permission settings.
+            hasBackgroundLocation = backgroundLocationGranted()
+        }
+    }
+
+    val backgroundPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasBackgroundLocation = granted
+    }
+
+    val requestBackgroundLocation = {
+        when {
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> {
+                // Android 10 can request "Allow all the time" in its runtime dialog.
+                backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+                // Android 11+ must grant "Allow all the time" from system app settings.
+                try {
+                    settingsContext.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", settingsContext.packageName, null)
+                        }
+                    )
+                } catch (e: RuntimeException) {
+                    LogUtil.e(AppConfig.TAG, "Could not open app permissions for background Wi-Fi detection", e)
+                }
+            }
+            else -> Unit
+        }
+    }
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         wifiAutoDisconnect = granted
+        if (granted && !backgroundLocationGranted()) requestBackgroundLocation()
     }
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
@@ -325,7 +372,7 @@ fun SettingsScreen(
             if (vpnSettingsExpanded) {
                 SettingsSwitchItem(
                     title = "指定 Wi-Fi 自动断开代理",
-                    summary = "连接指定 Wi-Fi 后停止代理，不会自动重连；需开启系统定位服务",
+                    summary = "命中 Wi-Fi 后断开代理，不会自动重连。后台检测需要定位权限设为“始终允许”，并开启系统定位",
                     checked = wifiAutoDisconnect,
                     onCheckedChange = { enabled ->
                         if (!enabled) {
@@ -334,11 +381,19 @@ fun SettingsScreen(
                                 settingsContext, Manifest.permission.ACCESS_FINE_LOCATION
                             ) == PackageManager.PERMISSION_GRANTED) {
                             wifiAutoDisconnect = true
+                            if (!backgroundLocationGranted()) requestBackgroundLocation()
                         } else {
                             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                         }
                     }
                 )
+                if (wifiAutoDisconnect && !hasBackgroundLocation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    SettingsMenuItem(
+                        title = "授予后台 Wi-Fi 检测权限",
+                        subtitle = "当前仅限应用使用期间。点击后在系统权限中将“位置”设为“始终允许”，并启用精确位置",
+                        onClick = requestBackgroundLocation
+                    )
+                }
                 SettingsEditItem(
                     title = "自动断开的 Wi-Fi 名称（SSID，每行一个）",
                     value = wifiDisconnectSsids,
