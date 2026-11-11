@@ -97,7 +97,11 @@ class WifiDisconnectMonitor(
             wifiManager.connectionInfo?.ssid
         }?.removeSurrounding("\"") ?: return
 
-        if (ssid == WifiManager.UNKNOWN_SSID.removeSurrounding("\"") || ssid !in targets) return
+        if (ssid == WifiManager.UNKNOWN_SSID.removeSurrounding("\"")) {
+            LogUtil.w(AppConfig.TAG, "Wi-Fi auto-disconnect: SSID unavailable. Check precise and background location access.")
+            return
+        }
+        if (ssid !in targets) return
 
         // Collapse duplicate onAvailable / onCapabilitiesChanged events.
         handler.post {

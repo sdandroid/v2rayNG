@@ -3,7 +3,8 @@ name: Build Wi-Fi auto-disconnect APK
 on:
   push:
     branches:
-      - feature/wifi-auto-disconnect
+      - master
+      - fix/wifi-background-detection
   workflow_dispatch:
 
 permissions:
