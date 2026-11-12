@@ -115,34 +115,22 @@ jobs:
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/fdroid/release/*arm64-v8a*.apk
 
 
-  sign-and-release:
+  publish-release:
     needs: build
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
 
     steps:
-      - name: Download APK artifacts
-        uses: actions/download-artifact@v8
+      - name: Download signed APK artifact
+        uses: actions/download-artifact@v4
         with:
-          path: release
+          name: arm64-v8a
+          path: release-files
 
-      - name: Sign APK files
-        run: |
-          printf '%s' "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          KEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
-          mkdir -p release-files
-
-          find release -type f -name '*.apk' | while read apk; do
-            cp "$apk" release-files/
-            gpg --batch --yes --local-user "$KEY" --detach-sign --output "release-files/$(basename "$apk").sig" "$apk"
-          done
-
-          gpg --armor --export "$KEY" > release-files/v2rayN-public-key.asc
-
-      - name: Upload APKs, signatures and public key to release
+      - name: Publish Android-signed APK
         uses: svenstaro/upload-release-action@v2
         with:
-          file: release-files/*
+          file: release-files/*.apk
           tag: ${{ inputs.release_tag }}
           file_glob: true
           prerelease: true
