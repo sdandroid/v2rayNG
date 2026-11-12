@@ -137,13 +137,15 @@ class WifiDisconnectMonitor(
             }
 
             // Some Android versions expose the SSID only through network capabilities.
-            for (network in connectivity.allNetworks) {
-                val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
-                if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
-                val ssid = (capabilities.transportInfo as? WifiInfo)?.ssid
-                if (knownSsid(ssid)) {
-                    maybeDisconnect(ssid!!.removeSurrounding("\""))
-                    return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                for (network in connectivity.allNetworks) {
+                    val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
+                    if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
+                    val ssid = (capabilities.transportInfo as? WifiInfo)?.ssid
+                    if (knownSsid(ssid)) {
+                        maybeDisconnect(ssid!!.removeSurrounding("\""))
+                        return
+                    }
                 }
             }
             LogUtil.w(AppConfig.TAG, "Wi-Fi auto-disconnect: SSID unavailable ($reason). Check precise and background location permissions, and system location.")
