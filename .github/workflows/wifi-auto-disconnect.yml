@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - fix/wifi-background-detection
+      - chore/arm64-only-build
   workflow_dispatch:
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
         run: |
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
           export NDK_HOME="$ANDROID_NDK_HOME"
-          bash compile-hevtun.sh
+          ABIS=arm64-v8a bash compile-hevtun.sh
           cp -r libs V2rayNG/app/
 
       - name: Determine Xray library version
@@ -60,17 +60,19 @@ jobs:
           fileName: libv2ray.aar
           out-file-path: V2rayNG/app/libs/
 
-      - name: Assemble unsigned-for-release debug APKs
+      - name: Assemble arm64-v8a debug APK
         run: |
           cd V2rayNG
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           chmod +x gradlew
-          ./gradlew assembleFdroidDebug --stacktrace
+          ./gradlew assembleFdroidDebug -PABI_FILTERS=arm64-v8a --stacktrace
+          test "$(find app/build/outputs/apk/fdroid/debug -maxdepth 1 -name '*.apk' | wc -l)" -eq 1
+          test "$(find app/build/outputs/apk/fdroid/debug -maxdepth 1 -name '*arm64-v8a*.apk' | wc -l)" -eq 1
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: v2rayNG-wifi-auto-disconnect-debug-apks
-          path: V2rayNG/app/build/outputs/apk/fdroid/debug/*.apk
+          name: v2rayNG-arm64-v8a-debug
+          path: V2rayNG/app/build/outputs/apk/fdroid/debug/*arm64-v8a*.apk
           if-no-files-found: error
           retention-days: 14
