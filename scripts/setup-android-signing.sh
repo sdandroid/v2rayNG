@@ -7,26 +7,50 @@ umask 077
 REPO="${REPO:-sdandroid/v2rayNG}"
 KEYSTORE_PATH="${KEYSTORE_PATH:-$PWD/v2rayng-release.jks}"
 KEY_ALIAS="v2rayng"
+SETUP_MODE="${1:-}"
+if [[ -n "$SETUP_MODE" && "$SETUP_MODE" != "--manual" ]]; then
+  echo "Usage: bash scripts/setup-android-signing.sh [--manual]" >&2
+  exit 1
+fi
 
-for tool in gh keytool base64; do
+for tool in keytool base64; do
   if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "Missing: $tool. Install GitHub CLI and a JDK (Java 17+) first." >&2
+    echo "Missing: $tool. Install a JDK (Java 17+) first." >&2
     exit 1
   fi
 done
 
-if ! gh auth status >/dev/null 2>&1; then
-  echo "Authenticate using: gh auth login" >&2
-  exit 1
-fi
+if [[ "$SETUP_MODE" == "--manual" ]]; then
+  echo "Manual mode: this script cannot check existing repository secrets."
+  echo "If a keystore secret already exists, do NOT create a new key."
+  printf "Confirm you checked the repository Secrets and wish to continue (type YES): "
+  read -r confirmation
+  if [[ "$confirmation" != "YES" ]]; then
+    echo "Aborted."
+    exit 1
+  fi
+else
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "GitHub CLI missing. Install 'gh' or use --manual and configure Secrets in the browser." >&2
+    exit 1
+  fi
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "Authenticate using: gh auth login (or use --manual)." >&2
+    exit 1
+  fi
 
-# Actions secrets cannot be retrieved to reconstruct a lost keystore.
-# Refuse to silently replace an already configured signing identity.
-secret_names="$(gh secret list --repo "$REPO" --app actions --json name --jq '.[].name')"
-if grep -Fxq "APP_KEYSTORE_BASE64" <<< "$secret_names"; then
-  echo "APP_KEYSTORE_BASE64 already exists in $REPO." >&2
-  echo "Refusing to overwrite the fixed signing key. Keep using your existing keystore." >&2
-  exit 1
+  # Actions secrets cannot be retrieved to reconstruct a lost keystore.
+  # Refuse to silently replace an already configured signing identity.
+  if ! secret_names="$(gh secret list --repo "$REPO" --app actions --json name --jq '.[].name')"; then
+    echo "Cannot list Actions Secrets with current GitHub CLI credentials." >&2
+    echo "Use a terminal authenticated with repository admin rights, or run --manual." >&2
+    exit 1
+  fi
+  if grep -Fxq "APP_KEYSTORE_BASE64" <<< "$secret_names"; then
+    echo "APP_KEYSTORE_BASE64 already exists in $REPO." >&2
+    echo "Refusing to overwrite the fixed signing key. Keep using your existing keystore." >&2
+    exit 1
+  fi
 fi
 
 printf "Create/reuse fixed keystore: %s\n" "$KEYSTORE_PATH"
@@ -65,11 +89,19 @@ fi
 keytool -list -keystore "$KEYSTORE_PATH" \
   -storepass:env APP_KEYSTORE_PASSWORD -alias "$KEY_ALIAS" >/dev/null
 
-# GitHub CLI encrypts secret values locally before uploading them.
 # Never commit or upload the raw keystore as an Actions artifact.
-base64 < "$KEYSTORE_PATH" | tr -d '\r\n' | gh secret set APP_KEYSTORE_BASE64 --repo "$REPO" --app actions
-printf '%s' "$APP_KEYSTORE_PASSWORD" | gh secret set APP_KEYSTORE_PASSWORD --repo "$REPO" --app actions
+if [[ "$SETUP_MODE" == "--manual" ]]; then
+  echo "Keystore generated/verified locally. Configure BOTH secrets via:"
+  echo "  https://github.com/$REPO/settings/secrets/actions"
+  echo "  APP_KEYSTORE_PASSWORD = the password you entered (do not share it)"
+  echo "  APP_KEYSTORE_BASE64 = the output of:"
+  printf "    base64 < %q | tr -d '\\r\\n'\n" "$KEYSTORE_PATH"
+else
+  # GitHub CLI encrypts secret values locally before uploading them.
+  base64 < "$KEYSTORE_PATH" | tr -d '\r\n' | gh secret set APP_KEYSTORE_BASE64 --repo "$REPO" --app actions
+  printf '%s' "$APP_KEYSTORE_PASSWORD" | gh secret set APP_KEYSTORE_PASSWORD --repo "$REPO" --app actions
+  echo "Signing secrets configured: APP_KEYSTORE_BASE64 and APP_KEYSTORE_PASSWORD."
+fi
 
-echo "Signing secrets configured: APP_KEYSTORE_BASE64 and APP_KEYSTORE_PASSWORD."
 echo "BACK UP $KEYSTORE_PATH AND YOUR PASSWORD to an offline, secure location."
 echo "Never regenerate the keystore: using a new key breaks APK signature continuity."
