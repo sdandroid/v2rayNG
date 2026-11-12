@@ -95,10 +95,10 @@ if [[ "$SETUP_MODE" == "--manual" ]]; then
   echo "  https://github.com/$REPO/settings/secrets/actions"
   echo "  APP_KEYSTORE_PASSWORD = the password you entered (do not share it)"
   echo "  APP_KEYSTORE_BASE64 = the output of:"
-  printf "    base64 < %q | tr -d '\\r\\n'\n" "$KEYSTORE_PATH"
+  printf "    base64 < %q | tr -d '[:space:]'\n" "$KEYSTORE_PATH"
 else
   # GitHub CLI encrypts secret values locally before uploading them.
-  base64 < "$KEYSTORE_PATH" | tr -d '\r\n' | gh secret set APP_KEYSTORE_BASE64 --repo "$REPO" --app actions
+  base64 < "$KEYSTORE_PATH" | tr -d '[:space:]' | gh secret set APP_KEYSTORE_BASE64 --repo "$REPO" --app actions
   printf '%s' "$APP_KEYSTORE_PASSWORD" | gh secret set APP_KEYSTORE_PASSWORD --repo "$REPO" --app actions
   echo "Signing secrets configured: APP_KEYSTORE_BASE64 and APP_KEYSTORE_PASSWORD."
 fi
