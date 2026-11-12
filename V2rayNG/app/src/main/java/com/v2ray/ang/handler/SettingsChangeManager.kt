@@ -21,6 +21,9 @@ object SettingsChangeManager {
         AppConfig.PREF_UI_MODE_NIGHT,
         AppConfig.PREF_DYNAMIC_COLOR,
         AppConfig.PREF_IS_BOOTED,
+        // The Wi-Fi service monitor picks these up without restarting the VPN.
+        AppConfig.PREF_WIFI_AUTO_DISCONNECT,
+        AppConfig.PREF_WIFI_DISCONNECT_SSIDS,
     )
 
     /**

@@ -47,6 +47,7 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
+import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.root.RootManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
@@ -74,6 +75,11 @@ class SettingsActivity : BaseComponentActivity() {
                 viewModel.refreshSystemVpnSettingsAvailability()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        MessageHelper.sendMsg2Service(this, AppConfig.MSG_WIFI_DISCONNECT_RECHECK, "")
     }
 
     private fun openSystemVpnSettings() {
@@ -394,6 +400,13 @@ fun SettingsScreen(
                         onClick = requestBackgroundLocation
                     )
                 }
+                SettingsMenuItem(
+                    title = "立即检测当前 Wi-Fi",
+                    subtitle = "连接仍未断开？点击检查当前 SSID 与已配置的名单，并查看运行日志",
+                    onClick = {
+                        MessageHelper.sendMsg2Service(settingsContext, AppConfig.MSG_WIFI_DISCONNECT_RECHECK, "")
+                    }
+                )
                 SettingsEditItem(
                     title = "自动断开的 Wi-Fi 名称（SSID，每行一个）",
                     value = wifiDisconnectSsids,

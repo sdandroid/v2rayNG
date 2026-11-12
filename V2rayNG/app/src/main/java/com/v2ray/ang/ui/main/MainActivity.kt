@@ -22,6 +22,7 @@ import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SubscriptionInfoParser
@@ -96,6 +97,12 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.onAction(MainAction.Initialize)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check an already-connected Wi-Fi when the app becomes visible.
+        MessageHelper.sendMsg2Service(this, AppConfig.MSG_WIFI_DISCONNECT_RECHECK, "")
     }
 
     @Composable

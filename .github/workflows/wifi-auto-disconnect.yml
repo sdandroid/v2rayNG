@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - feature/fixed-apk-signing
+      - fix/wifi-disconnect-regression
   workflow_dispatch:
 
 permissions:

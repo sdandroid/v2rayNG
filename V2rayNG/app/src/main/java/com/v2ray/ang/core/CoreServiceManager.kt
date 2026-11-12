@@ -491,6 +491,10 @@ object CoreServiceManager {
                     serviceControl.stopService()
                 }
 
+                AppConfig.MSG_WIFI_DISCONNECT_RECHECK -> {
+                    wifiDisconnectMonitor?.refresh()
+                }
+
                 AppConfig.MSG_STATE_RESTART -> {
                     LogUtil.i(AppConfig.TAG, "StartCore-Manager: Restart service")
                     // The UI and daemon run in separate processes, so acknowledge the active
