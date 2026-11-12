@@ -18,7 +18,7 @@
 5. **立即下载、离线备份** `v2rayng-release.jks`，并单独保存密码。Codespaces 中可右键文件选择 **Download**。不要提交、截图或发送私钥。
 6. 打开 **Actions → Build Wi-Fi auto-disconnect APK → Run workflow**。下载 `v2rayNG-arm64-v8a-signed`。
 
-> 如果 Codespaces 未登录 GitHub CLI，运行 `gh auth login`；如果当前登录身份没有配置仓库 Secrets 的权限，请改用有管理员权限的终端。
+> 如果 Codespaces 未登录 GitHub CLI，运行 `gh auth login`。如果 Codespaces 自带令牌没有管理 Secrets 的权限，可运行 `bash scripts/setup-android-signing.sh --manual`；确认仓库原本没有固定签名 Secret，再按脚本提示到 GitHub 网页手动填写两个 Secrets。
 >
 > 初始化脚本为了防止误换签名，检测到 `APP_KEYSTORE_BASE64` 已存在时会拒绝覆盖。丢失 keystore 后无法从 GitHub Secret 读取回来，因此备份非常重要。
 
@@ -37,4 +37,4 @@
 
 ## 手动配置 Secrets
 
-也可以自行创建一个带有别名 `v2rayng`、密钥与库密码一致的 keystore，然后进入 **Settings → Secrets and variables → Actions → New repository secret** 分别填写以上两个 Secrets。Base64 内容可以通过 `base64 < v2rayng-release.jks | tr -d '\r\n'` 生成（注意不要将输出贴到公开仓库）。
+也可以自行创建一个带有别名 `v2rayng`、密钥与库密码一致的 keystore，然后进入 **Settings → Secrets and variables → Actions → New repository secret** 分别填写以上两个 Secrets。Base64 内容可以通过 `base64 < v2rayng-release.jks | tr -d '[:space:]'` 生成（注意不要将输出贴到公开仓库）。
