@@ -30,11 +30,11 @@
 - 只编译并上传 `arm64-v8a` 架构 APK。
 - 配置这两个 Secrets 后，`master` 的自动构建输出固定签名的 `fdroidRelease` APK。
 - 尚未配置 Secrets 时，只上传明确标有 `NOT-FIXED-SIGNED` 的临时 Debug 测试 APK，**不能**拿它当稳定更新包。
-- 手动 `Build APK` 工作流同样使用这两项 Secrets；它没有 Debug 回退。
+- 手动 `Build APK` 工作流同样使用这两项 Secrets；它没有 Debug 回退。填写 `release_tag` 可发布已用 Android keystore 签名的 APK，不再要求额外的 GPG 私钥。
 - 不会把 keystore、密码写入 Git 仓库或构建日志。
 - 更新时仍需要相同的 Android 应用包名与签名；如果已安装的是以前的随机 Debug 签名版本，不能直接覆盖安装。先导出节点配置备份，再卸载旧版并安装固定签名版。
 - 后续如果升级应用版本，记得增加 APK 的 versionCode；不要更换 signing keystore。
 
 ## 手动配置 Secrets
 
-也可以自行创建一个带有别名 `v2rayng`、密钥与库密码一致的 keystore，然后进入 **Settings → Secrets and variables → Actions → New repository secret** 分别填写以上两个 Secrets。Base64 内容可以通过 `base64 < v2rayng-release.jks | tr -d '\\r\\n'` 生成（注意不要将输出贴到公开仓库）。
+也可以自行创建一个带有别名 `v2rayng`、密钥与库密码一致的 keystore，然后进入 **Settings → Secrets and variables → Actions → New repository secret** 分别填写以上两个 Secrets。Base64 内容可以通过 `base64 < v2rayng-release.jks | tr -d '\r\n'` 生成（注意不要将输出贴到公开仓库）。
