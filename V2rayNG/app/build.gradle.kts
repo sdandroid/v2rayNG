@@ -38,8 +38,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Signing material is only read from the CI environment; never committed to Git.
+    val signingKeystoreFile = System.getenv("APP_KEYSTORE_FILE")
+    val signingKeystorePassword = System.getenv("APP_KEYSTORE_PASSWORD")
+    if (!signingKeystoreFile.isNullOrBlank() && !signingKeystorePassword.isNullOrBlank()) {
+        signingConfigs {
+            create("fixedRelease") {
+                storeFile = file(signingKeystoreFile)
+                storePassword = signingKeystorePassword
+                keyAlias = "v2rayng"
+                keyPassword = signingKeystorePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (!signingKeystoreFile.isNullOrBlank() && !signingKeystorePassword.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("fixedRelease")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
