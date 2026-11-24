@@ -38,6 +38,7 @@ import com.v2ray.ang.ui.server.ServerCustomConfigActivity
 import com.v2ray.ang.ui.server.ServerGroupActivity
 import com.v2ray.ang.ui.server.ServerHttpActivity
 import com.v2ray.ang.ui.server.ServerHysteria2Activity
+import com.v2ray.ang.ui.server.ServerMasqueActivity
 import com.v2ray.ang.ui.server.ServerProxyChainActivity
 import com.v2ray.ang.ui.server.ServerShadowsocksActivity
 import com.v2ray.ang.ui.server.ServerSocksActivity
@@ -55,6 +56,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
+
+    internal companion object {
+        const val EXTRA_REFRESH_AFTER_IMPORT = "com.v2ray.ang.extra.REFRESH_AFTER_IMPORT"
+    }
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
@@ -99,9 +104,15 @@ class MainActivity : HelperBaseComponentActivity() {
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_REFRESH_AFTER_IMPORT, false)) {
+            mainViewModel.onAction(MainAction.RefreshGroups)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        // Check an already-connected Wi-Fi when the app becomes visible.
         MessageHelper.sendMsg2Service(this, AppConfig.MSG_WIFI_DISCONNECT_RECHECK, "")
     }
 
@@ -220,6 +231,7 @@ class MainActivity : HelperBaseComponentActivity() {
             EConfigType.TROJAN.value -> Intent(this, ServerTrojanActivity::class.java)
             EConfigType.WIREGUARD.value -> Intent(this, ServerWireguardActivity::class.java)
             EConfigType.HYSTERIA2.value -> Intent(this, ServerHysteria2Activity::class.java)
+            EConfigType.MASQUE.value -> Intent(this, ServerMasqueActivity::class.java)
             else -> Intent(this, ServerHttpActivity::class.java).apply {
                 putExtra("createConfigType", createConfigType)
             }
@@ -261,7 +273,7 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun editServer(guid: String, profile: ProfileItem) {
         val activityClass = when (profile.configType) {
-            EConfigType.CUSTOM -> ServerCustomConfigActivity::class.java
+            EConfigType.CUSTOM, EConfigType.CUSTOM_OUTBOUND -> ServerCustomConfigActivity::class.java
             EConfigType.POLICYGROUP -> ServerGroupActivity::class.java
             EConfigType.PROXYCHAIN -> ServerProxyChainActivity::class.java
             EConfigType.VMESS -> ServerVmessActivity::class.java
@@ -272,6 +284,7 @@ class MainActivity : HelperBaseComponentActivity() {
             EConfigType.TROJAN -> ServerTrojanActivity::class.java
             EConfigType.WIREGUARD -> ServerWireguardActivity::class.java
             EConfigType.HYSTERIA2 -> ServerHysteria2Activity::class.java
+            EConfigType.MASQUE -> ServerMasqueActivity::class.java
             else -> ServerHttpActivity::class.java
         }
         val intent = Intent(this, activityClass).apply {
