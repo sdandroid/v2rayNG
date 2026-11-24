@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - fix/wifi-disconnect-regression
+      - sync/upstream-2026-11-24
   workflow_dispatch:
 
 permissions:
